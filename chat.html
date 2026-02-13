@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Øyestyring - Interaktiv Assistent</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .avatar-section {
+            text-align: center;
+            border: 2px solid #ddd;
+            padding: 20px;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+        
+        .avatar-section iframe {
+            width: 100%;
+            height: 400px;
+            border: none;
+            border-radius: 8px;
+        }
+        
+        .chat-section {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-box {
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            height: 400px;
+            overflow-y: auto;
+            background: #fafafa;
+            margin-bottom: 20px;
+        }
+        
+        .message {
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 15px;
+            max-width: 90%;
+            word-wrap: break-word;
+        }
+        
+        .user-message {
+            background: #3498db;
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+        
+        .bot-message {
+            background: white;
+            border: 1px solid #ddd;
+            color: #333;
+        }
+        
+        .source {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 10px;
+            font-style: italic;
+            border-top: 1px solid #eee;
+            padding-top: 5px;
+        }
+        
+        .input-area {
+            display: flex;
+            gap: 10px;
+        }
+        
+        input[type="text"] {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            font-size: 16px;
+        }
+        
+        button {
+            padding: 15px 30px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        button:hover {
+            background: #229954;
+        }
+        
+        button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        
+        .speak-btn {
+            background: #2980b9;
+            padding: 8px 15px;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        
+        .speak-btn:hover {
+            background: #1f6691;
+        }
+        
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+        
+        .error {
+            color: #e74c3c;
+            background: #fadbd8;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            margin-top: 5px;
+        }
+        
+        .badge-fact {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-general {
+            background: #fff3cd;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Kunnskapsassistent for Øyestyring</h1>
+        <p style="text-align: center; color: #666;">Spør om øyestyring, ALS, hjelpemidler eller kommunikasjon</p>
+        
+        <div class="main-layout">
+            <!-- HEYGEN AVATAR SEKSJON -->
+            <div class="avatar-section">
+                <h3>Avatar</h3>
+                <!-- LIM INN DIN HEYGEN EMBED KODE HER (iframe eller script) -->
+                <div id="heygen-avatar">
+                    <!-- EKSEMPEL: <iframe src="https://app.heygen.com/embed/..." allow="camera; microphone"></iframe> -->
+                    <p style="color: #999;">(Lim inn din Heygen embed-kode her)</p>
+                </div>
+
+<iframe src="https://embed.liveavatar.com/v1/e5cabfdf-ef7a-4cb2-bfeb-7d3414d864f2" allow="microphone" title="LiveAvatar Embed" style="aspect-ratio: 16/9;"></iframe>
+
+
+                <p><small>Avatar kan svare på spørsmål via tekstchatten til høyre</small></p>
+            </div>
+
+            <!-- CHAT SEKSJON -->
+            <div class="chat-section">
+                <h3>Chat (også for tastaturbrukere)</h3>
+                
+                <div class="chat-box" id="chatBox">
+                    <div class="message bot-message">
+                        Hei! Jeg kan hjelpe deg med informasjon om øyestyring, ALS og kommunikasjonshjelpemidler. Skriv spørsmålet ditt nedenfor!
+                    </div>
+                </div>
+
+                <div class="input-area">
+                    <input type="text" id="userInput" placeholder="Eks: Hva er ALS? Hvordan fungerer øyestyring?" autocomplete="off">
+                    <button id="sendBtn" onclick="sendMessage()">Spør</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // KONFIGURASJON - BYTT UT DISSE:
+        const HEYGEN_API_KEY = 'ZmVhNjM3YzQ2MjUwNDUwM2I2MzBkMWVhZTEzY2I0NDEtMTY5NTU3NzI2MA==';  // Lim inn fra Heygen API Keys
+        const AVATAR_ID = '05cbbe6b72054a379edd4dee590fcd8a';            // Lim inn fra Heygen Dashboard
+        
+        const chatBox = document.getElementById('chatBox');
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+
+        function addMessage(text, isUser, extraContent = null) {
+            const div = document.createElement('div');
+            div.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            div.innerHTML = text;
+            
+            if (extraContent) {
+                div.appendChild(extraContent);
+            }
+            
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            return div;
+        }
+
+       async function speakWithAvatar(text) {
+    try {
+        // Fjern HTML-tags og begrens lengde
+        const cleanText = text.replace(/<[^>]*>/g, '').substring(0, 1500);
+        
+        // VIKTIG: Gå via DIN server, ikke direkte til Heygen!
+        const response = await fetch('http://localhost:5000/snakk', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                tekst: cleanText
+                // avatar_id sendes automatisk fra serveren, 
+                // eller legg til her hvis du vil være fleksibel
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            console.log("Avataren snakker nå!");
+            return true;
+        } else {
+            console.error("Serverfeil:", data);
+            alert("Kunne ikke spille av lyd: " + data.melding);
+            return false;
+        }
+    } catch (error) {
+        console.error("Nettverksfeil:", error);
+        alert("Kunne ikke kontakte serveren. Sjekk at smart_server.py kjører.");
+        return false;
+    }
+}
+
+        async function sendMessage() {
+            const question = userInput.value.trim();
+            if (!question) return;
+
+            // Deaktiver input
+            sendBtn.disabled = true;
+            userInput.disabled = true;
+
+            // Vis brukerspørsmål
+            addMessage(question, true);
+            userInput.value = '';
+
+            // Vis loading
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message bot-message loading';
+            loadingDiv.textContent = 'Sjekker kunnskapsbase...';
+            chatBox.appendChild(loadingDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                const response = await fetch('http://localhost:5000/spor', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({sporsmal: question})
+                });
+
+                // Fjern loading
+                loadingDiv.remove();
+
+                if (!response.ok) {
+                    throw new Error('Serverfeil: ' + response.status);
+                }
+
+                const data = await response.json();
+                console.log('Svar mottatt:', data);
+
+                // Bygg opp svartekst
+                let messageHtml = data.svar;
+                
+                // Legg til badge for type svar
+                if (data.kilde === 'faktabasert') {
+                    messageHtml += '<br><span class="badge badge-fact">✓ Basert på Wikipedia/kunnskapsbase</span>';
+                } else {
+                    messageHtml += '<br><span class="badge badge-general">Generell kunnskap</span>';
+                }
+                
+                // Legg til kilder hvis finnes
+                if (data.kilder && data.kilder.length > 0) {
+                    const sources = data.kilder
+                        .filter(k => k.url) // Bare de med URL
+                        .map(k => `<a href="${k.url}" target="_blank" style="color:#2980b9">${k.kilde}</a>`)
+                        .join(', ');
+                    
+                    if (sources) {
+                        messageHtml += `<div class="source">Kilder: ${sources}</div>`;
+                    }
+                }
+
+                // Lag speak-knapp hvis faktabasert
+                let speakBtn = null;
+                if (data.kilde === 'faktabasert') {
+                    speakBtn = document.createElement('button');
+                    speakBtn.className = 'speak-btn';
+                    speakBtn.innerHTML = '🔊 Hør svaret';
+                    speakBtn.onclick = function() {
+                        speakWithAvatar(data.svar);
+                        this.innerHTML = '🔊 Spiller...';
+                        setTimeout(() => {
+                            this.innerHTML = '🔊 Hør svaret';
+                        }, 5000);
+                    };
+                }
+
+                // Vis melding
+                addMessage(messageHtml, false, speakBtn);
+
+            } catch (error) {
+                loadingDiv.remove();
+                addMessage(`<div class="error"><strong>Feil:</strong> ${error.message}<br>Sjekk at smart_server.py kjører på localhost:5000</div>`, false);
+                console.error(error);
+            }
+
+            // Reaktiver input
+            sendBtn.disabled = false;
+            userInput.disabled = false;
+            userInput.focus();
+        }
+
+        // Enter-tast for å sende
+        userInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
