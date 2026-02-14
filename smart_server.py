@@ -4,16 +4,31 @@ import json
 import os
 import re
 from pathlib import Path
-from openai import OpenAI
 import requests
 
-# Hent API-nøkkel fra miljøvariabel (Render setter denne)
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
-client = OpenAI(api_key=OPENAI_API_KEY)
+# VIKTIG:Importer openai på en måte som unngår proxy-problemer
+try:
+    from openai import OpenAI
+    # Ikke initialiser klienten globalt ennå - vent til vi trenger den
+    client = None
+    
+    def get_openai_client():
+        global client
+        if client is None:
+            api_key = os.environ.get('OPENAI_API_KEY')
+            if not api_key:
+                raise ValueError("OPENAI_API_KEY ikke satt")
+            # Bruk default http_client for å unngå proxy-problemer
+            client = OpenAI(api_key=api_key)
+        return client
+        
+except ImportError:
+    print("ADVARSEL: Kunne ikke importere OpenAI")
+    def get_openai_client():
+        raise Exception("OpenAI ikke tilgjengelig")
 
 app = Flask(__name__)
 CORS(app)
-
 # Last inn lokal kunnskap (Wikipedia-filene)
 kunnskap = {}
 
@@ -106,7 +121,8 @@ def generer_svar_med_kunnskap(sporsmal, kontekst):
     
     try:
         # NY MÅTE - OpenAI 1.0.0:
-        response = client.chat.completions.create(
+       client_instance = get_openai_client()
+response = client_instance.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": system_prompt},
