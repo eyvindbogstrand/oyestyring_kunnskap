@@ -9,7 +9,7 @@ from openai import OpenAI
 
 # VIKTIG: Bytt ut med din faktiske OpenAI API-nøkkel
 # Finner du på: https://platform.openai.com/api-keys
-client = OpenAI(api_key=os.environ.get(api_key='MINNØKELHER')
+client = OpenAI(api_key=os.environ.get(api_key='OPENAI_API_KEY')
 
 app = Flask(__name__)
 CORS(app)
@@ -215,12 +215,12 @@ def snakk_med_avatar():
         
         headers = {
             'Content-Type': 'application/json',
-            'Authorization': f'Bearer {os.environ.get("HEYGEN_API_KEY", "DIN_HEYGEN_API_KEY_HER")}'
-            # Eller bytt ut med: 'Authorization': f'Bearer HEYGEN KEY'
+            'Authorization': f'Bearer {os.environ.get("HEYGEN_API_KEY", "HEYGEN_API_KEY")}'
+            # Eller bytt ut med: 'Authorization': f'Bearer HEYGEN_API_KEY'
         }
         
         payload = {
-            'avatar_id': data.get('avatar_id', 'MINAVATAR ID'),
+            'avatar_id': data.get('avatar_id', 'AVATAR_ID'),
             'text': tekst[:1500],  # Begrrens lengde
             'voice_type': 'text'
         }
