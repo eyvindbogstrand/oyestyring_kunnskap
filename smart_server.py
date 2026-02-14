@@ -3,13 +3,13 @@ from flask_cors import CORS
 import json
 import os
 import re
-import requests
 from pathlib import Path
 from openai import OpenAI
+import requests
 
-# VIKTIG: Bytt ut med din faktiske OpenAI API-nøkkel
-# Finner du på: https://platform.openai.com/api-keys
-client = OpenAI(api_key=os.environ.get(api_key='OPENAI_API_KEY')
+# Hent API-nøkkel fra miljøvariabel (Render setter denne)
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 app = Flask(__name__)
 CORS(app)
