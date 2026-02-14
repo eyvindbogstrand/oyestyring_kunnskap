@@ -4,31 +4,24 @@ import json
 import os
 import re
 from pathlib import Path
+from openai import OpenAI
 import requests
 
-# VIKTIG:Importer openai på en måte som unngår proxy-problemer
-try:
-    from openai import OpenAI
-    # Ikke initialiser klienten globalt ennå - vent til vi trenger den
-    client = None
-    
-    def get_openai_client():
-        global client
-        if client is None:
-            api_key = os.environ.get('OPENAI_API_KEY')
-            if not api_key:
-                raise ValueError("OPENAI_API_KEY ikke satt")
-            # Bruk default http_client for å unngå proxy-problemer
-            client = OpenAI(api_key=api_key)
-        return client
-        
-except ImportError:
-    print("ADVARSEL: Kunne ikke importere OpenAI")
-    def get_openai_client():
-        raise Exception("OpenAI ikke tilgjengelig")
+# Hent API-nøkkel fra miljøvariabel (Render setter denne)
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+client = None
+
+def get_openai_client():
+    global client
+    if client is None:
+        if not OPENAI_API_KEY:
+            raise ValueError("OPENAI_API_KEY ikke satt i miljøvariabler")
+        client = OpenAI(api_key=OPENAI_API_KEY)
+    return client
 
 app = Flask(__name__)
 CORS(app)
+
 # Last inn lokal kunnskap (Wikipedia-filene)
 kunnskap = {}
 
@@ -120,9 +113,8 @@ def generer_svar_med_kunnskap(sporsmal, kontekst):
     """ + "\n\n".join([f"Kilde: {k['kilde']}\n{k['tekst'][:500]}" for k in kontekst])
     
     try:
-        # NY MÅTE - OpenAI 1.0.0:
-       client_instance = get_openai_client()
-response = client_instance.chat.completions.create(
+        client_instance = get_openai_client()
+        response = client_instance.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -138,8 +130,8 @@ response = client_instance.chat.completions.create(
 def generer_svar_generell(sporsmal):
     """Standard GPT-4 for ting utenfor temaet"""
     try:
-        # NY MÅTE - OpenAI 1.0.0:
-        response = client.chat.completions.create(
+        client_instance = get_openai_client()
+        response = client_instance.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "Du er en hjelpsom, vennlig assistent på en nettside om øyestyring. Du kan svare på det meste, men hvis noen spør om øyestyring, ALS eller hjelpemidler, anbefaler du dem å bruke søkefunksjonen for spesifikk informasjon."},
@@ -196,87 +188,4 @@ def chat_endpoint():
         })
     
     else:
-        print("Generelt spørsmål - bruker GPT-4 fritt...")
-        svar = generer_svar_generell(sporsmal)
-        
-        return jsonify({
-            "sporsmal": sporsmal,
-            "svar": svar,
-            "kilde": "generell",
-            "brukte_lokal_kb": False
-        })
-
-@app.route('/status', methods=['GET'])
-def status():
-    return jsonify({
-        "status": "OK",
-        "modus": "Hybrid: Fakta for øyestyring, GPT-4 for generelt",
-        "lokale_artikler": len(kunnskap)
-    })
-
-@app.route('/snakk', methods=['POST'])
-def snakk_med_avatar():
-    """
-    Proxy for Heygen API - frontend spør oss, vi spør Heygen
-    """
-    data = request.get_json()
-    tekst = data.get('tekst', '')
-    
-    if not tekst:
-        return jsonify({"error": "Mangler tekst"}), 400
-    
-    try:
-        # Vi bruker requests-biblioteket (må installeres: pip install requests)
-        import requests
-        
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {os.environ.get("HEYGEN_API_KEY", "HEYGEN_API_KEY")}'
-            # Eller bytt ut med: 'Authorization': f'Bearer HEYGEN_API_KEY'
-        }
-        
-        payload = {
-            'avatar_id': data.get('avatar_id', 'AVATAR_ID'),
-            'text': tekst[:1500],  # Begrrens lengde
-            'voice_type': 'text'
-        }
-        
-        response = requests.post(
-            'https://api.heygen.com/v1/streaming.speak',
-            headers=headers,
-            json=payload,
-            timeout=10
-        )
-        
-        if response.status_code == 200:
-            return jsonify({"status": "ok", "melding": "Avataren snakker"})
-        else:
-            return jsonify({
-                "status": "feil", 
-                "melding": f"Heygen svarte: {response.status_code}",
-                "detalj": response.text
-            }), 500
-            
-    except Exception as e:
-        return jsonify({"status": "feil", "melding": str(e)}), 500
-
-# For produksjon (Render) - bruk miljøvariabler
-import os
-if os.environ.get('HEYGEN_API_KEY'):
-    HEYGEN_API_KEY = os.environ.get('HEYGEN_API_KEY')
-if os.environ.get('AVATAR_ID'):
-    # Du må oppdatere koden din til å lese AVATAR_ID fra miljøvariabel også
-    pass
-
-if __name__ == '__main__':
-    last_inn_kunnskap()
-    # Bruk port fra miljøvariabel (Render setter denne) eller 5000 lokalt
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
-
-if __name__ == '__main__':
-    last_inn_kunnskap()
-    print("Smart server klar!")
-    print("Husk: Bytt ut DIN_OPENAI_API_KEY_HER med din faktiske nøkkel!")
-    print("Åpne: http://localhost:5000/")
-    app.run(debug=True, port=5000)
+        print("Generelt
