@@ -188,4 +188,25 @@ def chat_endpoint():
         })
     
     else:
-        print("Generelt
+        print("Generelt spørsmål - bruker GPT-4 fritt...")
+        svar = generer_svar_generell(sporsmal)
+        
+        return jsonify({
+            "sporsmal": sporsmal,
+            "svar": svar,
+            "kilde": "generell",
+            "brukte_lokal_kb": False
+        })
+
+@app.route('/status', methods=['GET'])
+def status():
+    return jsonify({
+        "status": "OK",
+        "modus": "Hybrid: Fakta for øyestyring, GPT-4 for generelt",
+        "lokale_artikler": len(kunnskap)
+    })
+
+if __name__ == '__main__':
+    last_inn_kunnskap()
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
